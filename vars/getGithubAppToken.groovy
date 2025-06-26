@@ -24,6 +24,11 @@ def call(Map args = [:]) {
 
                 signature=\$(echo -n "\$data" | openssl dgst -sha256 -sign "\$PRIVATE_KEY_PATH" | b64enc)
                 jwt="\$data.\$signature"
+                
+                echo "Generated JWT: \$jwt"
+
+                echo "installationId: \$installationId"
+                echo "appId: \$appId"
 
                 response=\$(curl -s -X POST \
                     -H "Authorization: Bearer \$jwt" \
