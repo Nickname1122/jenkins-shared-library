@@ -26,6 +26,9 @@ def generateGithubAppToken(String appId, String installationId, String credentia
  * Returns a shell script string that builds a JWT and retrieves a GitHub App access token.
  */
 def buildJwtScript(String appId, String installationId) {
+    def appId = appId
+    def installationId = installationId
+
     return """#!/bin/bash
         set -e
 
@@ -33,7 +36,7 @@ def buildJwtScript(String appId, String installationId) {
         exp=\$((iat + 540)) # Token valid for 9 minutes
 
         header='{"alg":"RS256","typ":"JWT"}'
-        payload="{\\"iat\\":\$iat,\\"exp\\":\$exp,\\"iss\\":$appId}"
+        payload="{\\"iat\\":\$iat,\\"exp\\":\$exp,\\"iss\\":${appId}}"
 
         b64enc() { openssl base64 -e -A | tr '+/' '-_' | tr -d '='; }
 
@@ -47,7 +50,7 @@ def buildJwtScript(String appId, String installationId) {
         curl -s -X POST \\
             -H "Authorization: Bearer \$jwt" \\
             -H "Accept: application/vnd.github+json" \\
-            https://api.github.com/app/installations/$installationId/access_tokens \\
+            https://api.github.com/app/installations/${installationId}/access_tokens \\
         | jq -r .token
     """
 }
