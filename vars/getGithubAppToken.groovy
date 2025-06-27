@@ -26,31 +26,28 @@ def generateGithubAppToken(String appId, String installationId, String credentia
  * Returns a shell script string that builds a JWT and retrieves a GitHub App access token.
  */
 def buildJwtScript(String appId, String installationId) {
-    def appId = appId
-    def installationId = installationId
+    return '#!/bin/bash\n' +
+           'set -e\n\n' +
 
-    return """#!/bin/bash
-        set -e
+           'iat=$(date +%s)\n' +
+           'exp=$((iat + 540)) # Token valid for 9 minutes\n\n' +
 
-        iat=\$(date +%s)
-        exp=\$((iat + 540)) # Token valid for 9 minutes
+           'header=\'{"alg":"RS256","typ":"JWT"}\'\n' +
+           'payload="{\\"iat\\":$iat,\\"exp\\":$exp,\\"iss\\":' + appId + '}"\n\n' +
 
-        header='{"alg":"RS256","typ":"JWT"}'
-        payload="{\\"iat\\":\$iat,\\"exp\\":\$exp,\\"iss\\":${appId}}"
+           'b64enc() { openssl base64 -e -A | tr \'+/\' \'-_\' | tr -d \'=\'; }\n\n' +
 
-        b64enc() { openssl base64 -e -A | tr '+/' '-_' | tr -d '='; }
+           'header_b64=$(echo -n "$header" | b64enc)\n' +
+           'payload_b64=$(echo -n "$payload" | b64enc)\n' +
+           'data="$header_b64.$payload_b64"\n\n' +
 
-        header_b64=\$(echo -n "\$header" | b64enc)
-        payload_b64=\$(echo -n "\$payload" | b64enc)
-        data="\$header_b64.\$payload_b64"
+           'signature=$(echo -n "$data" | openssl dgst -sha256 -sign "$PRIVATE_KEY_PATH" | b64enc)\n' +
+           'jwt="$data.$signature"\n\n' +
 
-        signature=\$(echo -n "\$data" | openssl dgst -sha256 -sign "\$PRIVATE_KEY_PATH" | b64enc)
-        jwt="\$data.\$signature"
-
-        curl -s -X POST \\
-            -H "Authorization: Bearer \$jwt" \\
-            -H "Accept: application/vnd.github+json" \\
-            https://api.github.com/app/installations/${installationId}/access_tokens \\
-        | jq -r .token
-    """
+           'curl -s -X POST \\\n' +
+           '    -H "Authorization: Bearer $jwt" \\\n' +
+           '    -H "Accept: application/vnd.github+json" \\\n' +
+           '    https://api.github.com/app/installations/' + installationId + '/access_tokens \\\n' +
+           '| jq -r .token\n'
 }
+
