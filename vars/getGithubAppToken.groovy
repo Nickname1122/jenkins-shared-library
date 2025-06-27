@@ -7,35 +7,34 @@ def call(Map args = [:]) {
 
     withCredentials([file(credentialsId: credentialsId, variable: 'PRIVATE_KEY_PATH')]) {
         token = sh(
-                    script: """
-                        set -e
+            script: """
+                set -e
 
-                        iat=\$(date +%s)
-                        exp=\$((iat + 540)) # Token valid for 9 minutes
+                iat=\$(date +%s)
+                exp=\$((iat + 540)) # Token valid for 9 minutes
 
-                        header='{"alg":"RS256","typ":"JWT"}'
-                        iss="${appId}"  # Groovy injects value here
-                        payload="{\\\"iat\\\":\\\"\$iat\\\",\\\"exp\\\":\\\"\$exp\\\",\\\"iss\\\":\\\"\$iss\\\"}"
+                header='{"alg":"RS256","typ":"JWT"}'
+                payload="{\\"iat\\":\$iat,\\"exp\\":\$exp,\\"iss\\":$appId}"
 
-                        b64enc() { openssl base64 -e -A | tr "+/" "-_" | tr -d "="; }
+                b64enc() { openssl base64 -e -A | tr '+/' '-_' | tr -d '='; }
 
-                        header_b64=\$(echo -n "\$header" | b64enc)
-                        payload_b64=\$(echo -n "\$payload" | b64enc)
-                        data="\$header_b64.\$payload_b64"
+                header_b64=\$(echo -n "\$header" | b64enc)
+                payload_b64=\$(echo -n "\$payload" | b64enc)
+                data="\$header_b64.\$payload_b64"
 
-                        signature=\$(echo -n "\$data" | openssl dgst -sha256 -sign "$PRIVATE_KEY_PATH" | b64enc)
-                        jwt="\$data.\$signature"
+                signature=\$(echo -n "\$data" | openssl dgst -sha256 -sign "\$PRIVATE_KEY_PATH" | b64enc)
+                jwt="\$data.\$signature"
 
-                        response=\$(curl -s -X POST \
-                            -H "Authorization: Bearer \$jwt" \
-                            -H "Accept: application/vnd.github+json" \
-                            https://api.github.com/app/installations/${installationId}/access_tokens)
+                response=\$(curl -s -X POST \
+                    -H "Authorization: Bearer \$jwt" \
+                    -H "Accept: application/vnd.github+json" \
+                    https://api.github.com/app/installations/$installationId/access_tokens)
 
-                        echo "\$response" | jq -r .token
-                    """,
-                    returnStdout: true
-                ).trim()
+                echo "\$response" | jq -r .token
+            """,
+            returnStdout: true
+        ).trim()
     }
-    
+
     return token
 }
